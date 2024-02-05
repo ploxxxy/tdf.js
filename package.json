@@ -1,0 +1,14 @@
+{
+	"scripts": {
+		"build": "tsc"
+	},
+	"name": "node-tdf",
+	"version": "0.1.0",
+	"description": "Implements EA's TDF file format in JS",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"devDependencies": {
+		"@types/node": "^20.10.4",
+		"typescript": "^5.3.3"
+	}
+}
