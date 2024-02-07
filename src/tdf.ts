@@ -33,7 +33,7 @@ class TDFNotImplemented extends Error {
   }
 }
 
-abstract class TDF {
+class TDF {
   label!: string
   type!: TDFType
   value?: any
@@ -44,38 +44,44 @@ abstract class TDF {
 
     switch (type) {
       case TDFType.Integer:
-        return new TDFInteger(label, TDFInteger.readInteger(stream))
+        return new TDFInteger(label, TDFInteger.decode(stream))
       case TDFType.String:
-        return new TDFString(label, TDFString.readString(stream))
+        return new TDFString(label, TDFString.decode(stream))
       case TDFType.Blob:
-        return new TDFBlob(label, TDFBlob.readBlob(stream))
+        return new TDFBlob(label, TDFBlob.decode(stream))
       case TDFType.Struct:
-        return new TDFStruct(label, TDFStruct.readStruct(stream))
+        return new TDFStruct(label, TDFStruct.decode(stream))
       case TDFType.List:
-        return new TDFList(label, TDFList.readList(stream))
+        return new TDFList(label, TDFList.decode(stream))
       case TDFType.Dictionary:
-        return new TDFDictionary(label, TDFDictionary.readDictionary(stream))
+        return new TDFDictionary(label, TDFDictionary.decode(stream))
       case TDFType.Union:
-        return new TDFUnion(label, TDFUnion.readUnion(stream))
+        return new TDFUnion(label, TDFUnion.decode(stream))
       case TDFType.IntegerList:
         throw new TDFNotImplemented(TDFType.IntegerList)
-        // return new TDFIntegerList(label, TDFIntegerList.readIntegerList(stream))
+      // return new TDFIntegerList(label, TDFIntegerList.decode(stream))
       case TDFType.IntVector2:
-        return new TDFIntVector2(label, TDFIntVector2.readIntVector2(stream))
+        return new TDFIntVector2(label, TDFIntVector2.decode(stream))
       case TDFType.IntVector3:
-        return new TDFIntVector3(label, TDFIntVector3.readIntVector3(stream))
+        return new TDFIntVector3(label, TDFIntVector3.decode(stream))
       default:
         throw new UnknownTDFType(type.toString())
     }
   }
-
-  // abstract write(stream: Readable): void
 }
 
 class TDFInteger extends TDF {
   value: number
 
-  static readInteger(stream: Readable) {
+  constructor(label: string, value: number) {
+    super()
+
+    this.label = label
+    this.type = TDFType.Integer
+    this.value = value
+  }
+
+  static decode(stream: Readable) {
     let result = 0
 
     let byte = stream.read(1)
@@ -96,14 +102,6 @@ class TDFInteger extends TDF {
 
     return result
   }
-
-  constructor(label: string, value: number) {
-    super()
-
-    this.label = label
-    this.type = TDFType.Integer
-    this.value = value
-  }
 }
 
 class TDFString extends TDF {
@@ -117,8 +115,8 @@ class TDFString extends TDF {
     this.value = value
   }
 
-  static readString(stream: Readable) {
-    const length = TDFInteger.readInteger(stream)
+  static decode(stream: Readable) {
+    const length = TDFInteger.decode(stream)
     const string = stream.read(length - 1)
 
     stream.read(1)
@@ -126,7 +124,7 @@ class TDFString extends TDF {
     return string?.toString('utf8') ?? "<couldn't read>" // TODO: reimplement
   }
 
-  static writeString(stream: Readable, string: string) {
+  static encode(stream: Readable, string: string) {
     const length = (string.length + 1).toString(16)
 
     stream.push(Buffer.from(length.padStart(2, '0'), 'hex'))
@@ -146,8 +144,8 @@ class TDFBlob extends TDF {
     this.value = value
   }
 
-  static readBlob(stream: Readable) {
-    let length = TDFInteger.readInteger(stream)
+  static decode(stream: Readable) {
+    let length = TDFInteger.decode(stream)
     // is this correct?
     if (length > 10) {
       length = 1
@@ -173,7 +171,7 @@ class TDFStruct extends TDF {
     this.value = value
   }
 
-  static readStruct(stream: Readable) {
+  static decode(stream: Readable) {
     let list: TDF[] = []
     let b: Buffer
 
@@ -208,24 +206,24 @@ class TDFList extends TDF {
     this.value = value
   }
 
-  static readList(stream: Readable) {
+  static decode(stream: Readable) {
     let value: any[] = []
-    let subtype = TDFInteger.readInteger(stream)
-    let count = TDFInteger.readInteger(stream)
+    let subtype = TDFInteger.decode(stream)
+    let count = TDFInteger.decode(stream)
 
     for (let i = 0; i < count; i++) {
       switch (subtype) {
         case TDFType.Integer:
-          value.push(TDFInteger.readInteger(stream))
+          value.push(TDFInteger.decode(stream))
           break
         case TDFType.String:
-          value.push(TDFString.readString(stream))
+          value.push(TDFString.decode(stream))
           break
         case TDFType.Blob:
-          value.push('Blob')
+          value.push(TDFBlob.decode(stream))
           break
         case TDFType.Struct:
-          value.push(TDFStruct.readStruct(stream))
+          value.push(TDFStruct.decode(stream))
           break
         default:
           throw new TDFNotImplemented(subtype)
@@ -251,21 +249,21 @@ class TDFDictionary extends TDF {
     this.value = value
   }
 
-  static readDictionary(stream: Readable) {
+  static decode(stream: Readable) {
     let value: Dictionary<TDF> = {}
-    let dictionaryKeyType: TDFType = TDFInteger.readInteger(stream)
-    let dictionaryValueType: TDFType = TDFInteger.readInteger(stream)
-    let count = TDFInteger.readInteger(stream)
+    let dictionaryKeyType: TDFType = TDFInteger.decode(stream)
+    let dictionaryValueType: TDFType = TDFInteger.decode(stream)
+    let count = TDFInteger.decode(stream)
 
     for (let i = 0; i < count; i++) {
       let dictionaryKey: string | number, dictionaryValue: any
 
       switch (dictionaryKeyType) {
         case TDFType.Integer:
-          dictionaryKey = TDFInteger.readInteger(stream)
+          dictionaryKey = TDFInteger.decode(stream)
           break
         case TDFType.String:
-          dictionaryKey = TDFString.readString(stream)
+          dictionaryKey = TDFString.decode(stream)
           break
         default:
           throw new TDFNotImplemented(dictionaryKeyType)
@@ -273,16 +271,16 @@ class TDFDictionary extends TDF {
 
       switch (dictionaryValueType) {
         case TDFType.Integer:
-          dictionaryValue = TDFInteger.readInteger(stream)
+          dictionaryValue = TDFInteger.decode(stream)
           break
         case TDFType.String:
-          dictionaryValue = TDFString.readString(stream)
+          dictionaryValue = TDFString.decode(stream)
           break
         case TDFType.Blob:
-          dictionaryValue = TDFBlob.readBlob(stream)
+          dictionaryValue = TDFBlob.decode(stream)
           break
         case TDFType.Struct:
-          dictionaryValue = TDFStruct.readStruct(stream)
+          dictionaryValue = TDFStruct.decode(stream)
           break
         default:
           throw new TDFNotImplemented(dictionaryValueType)
@@ -306,7 +304,7 @@ class TDFUnion extends TDF {
     this.value = value
   }
 
-  static readUnion(stream: Readable) {
+  static decode(stream: Readable) {
     const unionType = stream.read(1).readUInt8(0)
     return TDF.readTDF(stream)
   }
@@ -323,7 +321,7 @@ class TDFIntegerList extends TDF {
     this.value = value
   }
 
-  static readIntegerList(stream: Readable) {}
+  static decode(stream: Readable) {}
 }
 
 class TDFIntVector2 extends TDF {
@@ -337,11 +335,11 @@ class TDFIntVector2 extends TDF {
     this.value = value
   }
 
-  static readIntVector2(stream: Readable) {
+  static decode(stream: Readable) {
     const value: number[] = []
 
     for (let i = 0; i < 2; i++) {
-      value.push(TDFInteger.readInteger(stream))
+      value.push(TDFInteger.decode(stream))
     }
 
     return value
@@ -359,11 +357,11 @@ class TDFIntVector3 extends TDF {
     this.value = value
   }
 
-  static readIntVector3(stream: Readable) {
+  static decode(stream: Readable) {
     const value: number[] = []
 
     for (let i = 0; i < 3; i++) {
-      value.push(TDFInteger.readInteger(stream))
+      value.push(TDFInteger.decode(stream))
     }
 
     return value
