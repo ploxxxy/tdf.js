@@ -61,25 +61,26 @@ var TDF = /** @class */ (function () {
         var type = stream.read(1).readUInt8(0);
         switch (type) {
             case TDFType.Integer:
-                return new TDFInteger(label, stream);
+                return new TDFInteger(label, TDFInteger.decode(stream));
             case TDFType.String:
-                return new TDFString(label, stream);
+                return new TDFString(label, TDFString.decode(stream));
             case TDFType.Blob:
-                return new TDFBlob(label, stream);
+                return new TDFBlob(label, TDFBlob.decode(stream));
             case TDFType.Struct:
-                return new TDFStruct(label, stream);
+                return new TDFStruct(label, TDFStruct.decode(stream));
             case TDFType.List:
-                return new TDFList(label, stream);
+                return new TDFList(label, TDFList.decode(stream));
             case TDFType.Dictionary:
-                return new TDFDictionary(label, stream);
+                return new TDFDictionary(label, TDFDictionary.decode(stream));
             case TDFType.Union:
-                return new TDFUnion(label, stream);
+                return new TDFUnion(label, TDFUnion.decode(stream));
             case TDFType.IntegerList:
-                return new TDFIntegerList(label, stream);
+                throw new TDFNotImplemented(TDFType.IntegerList);
+            // return new TDFIntegerList(label, TDFIntegerList.decode(stream))
             case TDFType.IntVector2:
-                return new TDFIntVector2(label, stream);
+                return new TDFIntVector2(label, TDFIntVector2.decode(stream));
             case TDFType.IntVector3:
-                return new TDFIntVector3(label, stream);
+                return new TDFIntVector3(label, TDFIntVector3.decode(stream));
             default:
                 throw new UnknownTDFType(type.toString());
         }
@@ -89,14 +90,14 @@ var TDF = /** @class */ (function () {
 exports.TDF = TDF;
 var TDFInteger = /** @class */ (function (_super) {
     __extends(TDFInteger, _super);
-    function TDFInteger(label, stream) {
+    function TDFInteger(label, value) {
         var _this = _super.call(this) || this;
         _this.label = label;
         _this.type = TDFType.Integer;
-        _this.value = TDFInteger.readInteger(stream);
+        _this.value = value;
         return _this;
     }
-    TDFInteger.readInteger = function (stream) {
+    TDFInteger.decode = function (stream) {
         var result = 0;
         var byte = stream.read(1);
         result += byte[0] & 0x3f;
@@ -116,21 +117,21 @@ var TDFInteger = /** @class */ (function (_super) {
 exports.TDFInteger = TDFInteger;
 var TDFString = /** @class */ (function (_super) {
     __extends(TDFString, _super);
-    function TDFString(label, stream) {
+    function TDFString(label, value) {
         var _this = _super.call(this) || this;
         _this.label = label;
         _this.type = TDFType.String;
-        _this.value = TDFString.readString(stream);
+        _this.value = value;
         return _this;
     }
-    TDFString.readString = function (stream) {
+    TDFString.decode = function (stream) {
         var _a;
-        var length = TDFInteger.readInteger(stream);
+        var length = TDFInteger.decode(stream);
         var string = stream.read(length - 1);
         stream.read(1);
-        return (_a = string === null || string === void 0 ? void 0 : string.toString('utf8')) !== null && _a !== void 0 ? _a : "<couldn't read>"; // TODO: reimplement
+        return (_a = string === null || string === void 0 ? void 0 : string.toString('utf8')) !== null && _a !== void 0 ? _a : '<couldn\'t read>'; // TODO: reimplement
     };
-    TDFString.writeString = function (stream, string) {
+    TDFString.encode = function (stream, string) {
         var length = (string.length + 1).toString(16);
         stream.push(Buffer.from(length.padStart(2, '0'), 'hex'));
         stream.push(Buffer.from(string, 'utf8'));
@@ -141,11 +142,16 @@ var TDFString = /** @class */ (function (_super) {
 exports.TDFString = TDFString;
 var TDFBlob = /** @class */ (function (_super) {
     __extends(TDFBlob, _super);
-    function TDFBlob(label, stream) {
+    function TDFBlob(label, value) {
         var _this = _super.call(this) || this;
         _this.label = label;
         _this.type = TDFType.Blob;
-        var length = TDFInteger.readInteger(stream);
+        _this.value = value;
+        return _this;
+    }
+    TDFBlob.decode = function (stream) {
+        var length = TDFInteger.decode(stream);
+        // is this correct?
         if (length > 10) {
             length = 1;
         }
@@ -153,22 +159,21 @@ var TDFBlob = /** @class */ (function (_super) {
         for (var i = 0; i < length; i++) {
             value[i] = stream.read(1);
         }
-        _this.value = value;
-        return _this;
-    }
+        return value;
+    };
     return TDFBlob;
 }(TDF));
 exports.TDFBlob = TDFBlob;
 var TDFStruct = /** @class */ (function (_super) {
     __extends(TDFStruct, _super);
-    function TDFStruct(label, stream) {
+    function TDFStruct(label, value) {
         var _this = _super.call(this) || this;
         _this.label = label;
         _this.type = TDFType.Struct;
-        _this.value = TDFStruct.readStruct(stream);
+        _this.value = value;
         return _this;
     }
-    TDFStruct.readStruct = function (stream) {
+    TDFStruct.decode = function (stream) {
         var list = [];
         var b;
         while (true) {
@@ -178,11 +183,10 @@ var TDFStruct = /** @class */ (function (_super) {
             }
             if (b[0] == 2) {
                 // idk?
+                continue;
             }
-            else {
-                stream.unshift(b);
-                list.push(TDF.readTDF(stream));
-            }
+            stream.unshift(b);
+            list.push(TDF.readTDF(stream));
         }
         return list;
     };
@@ -191,138 +195,155 @@ var TDFStruct = /** @class */ (function (_super) {
 exports.TDFStruct = TDFStruct;
 var TDFList = /** @class */ (function (_super) {
     __extends(TDFList, _super);
-    function TDFList(label, stream) {
+    function TDFList(label, value) {
         var _this = _super.call(this) || this;
-        _this.value = [];
         _this.label = label;
         _this.type = TDFType.List;
-        var subtype = TDFInteger.readInteger(stream);
-        var count = TDFInteger.readInteger(stream);
+        _this.value = value;
+        return _this;
+    }
+    TDFList.decode = function (stream) {
+        var value = [];
+        var subtype = TDFInteger.decode(stream);
+        var count = TDFInteger.decode(stream);
         for (var i = 0; i < count; i++) {
             switch (subtype) {
                 case TDFType.Integer:
-                    _this.value.push(TDFInteger.readInteger(stream));
+                    value.push(TDFInteger.decode(stream));
                     break;
                 case TDFType.String:
-                    _this.value.push(TDFString.readString(stream));
+                    value.push(TDFString.decode(stream));
                     break;
                 case TDFType.Blob:
-                    _this.value.push('Blob');
+                    value.push(TDFBlob.decode(stream));
                     break;
                 case TDFType.Struct:
-                    _this.value.push(TDFStruct.readStruct(stream));
+                    value.push(TDFStruct.decode(stream));
                     break;
-                // case TDFType.IntVector3:
-                //   this.value.push(new TDFIntVector3('', stream))
-                //   stream.read(1)
-                //   break
                 default:
-                    _this.value.push('Nothing');
+                    throw new TDFNotImplemented(subtype);
             }
         }
-        return _this;
-    }
+        return value;
+    };
     return TDFList;
 }(TDF));
 exports.TDFList = TDFList;
 var TDFDictionary = /** @class */ (function (_super) {
     __extends(TDFDictionary, _super);
-    function TDFDictionary(label, stream) {
+    function TDFDictionary(label, value) {
         var _this = _super.call(this) || this;
-        _this.value = {};
         _this.label = label;
         _this.type = TDFType.Dictionary;
-        var subtype1 = TDFInteger.readInteger(stream);
-        var subtype2 = TDFInteger.readInteger(stream);
-        var count = TDFInteger.readInteger(stream);
-        for (var i = 0; i < count; i++) {
-            var key = void 0, value = void 0;
-            switch (subtype1) {
-                case TDFType.Integer:
-                    key = TDFInteger.readInteger(stream);
-                    break;
-                case TDFType.String:
-                    key = TDFString.readString(stream);
-                    break;
-                default:
-                    throw new TDFNotImplemented(subtype1);
-            }
-            switch (subtype2) {
-                case TDFType.Integer:
-                    value = TDFInteger.readInteger(stream);
-                    break;
-                case TDFType.String:
-                    value = TDFString.readString(stream);
-                    break;
-                case TDFType.Blob:
-                    value = 'Blob';
-                    break;
-                case TDFType.Struct:
-                    value = TDFStruct.readStruct(stream);
-                    break;
-                default:
-                    throw new TDFNotImplemented(subtype2);
-            }
-            _this.value[key] = value;
-        }
+        _this.value = value;
         return _this;
     }
+    TDFDictionary.decode = function (stream) {
+        var value = {};
+        var dictionaryKeyType = TDFInteger.decode(stream);
+        var dictionaryValueType = TDFInteger.decode(stream);
+        var count = TDFInteger.decode(stream);
+        for (var i = 0; i < count; i++) {
+            var dictionaryKey = void 0, dictionaryValue = void 0;
+            switch (dictionaryKeyType) {
+                case TDFType.Integer:
+                    dictionaryKey = TDFInteger.decode(stream);
+                    break;
+                case TDFType.String:
+                    dictionaryKey = TDFString.decode(stream);
+                    break;
+                default:
+                    throw new TDFNotImplemented(dictionaryKeyType);
+            }
+            switch (dictionaryValueType) {
+                case TDFType.Integer:
+                    dictionaryValue = TDFInteger.decode(stream);
+                    break;
+                case TDFType.String:
+                    dictionaryValue = TDFString.decode(stream);
+                    break;
+                case TDFType.Blob:
+                    dictionaryValue = TDFBlob.decode(stream);
+                    break;
+                case TDFType.Struct:
+                    dictionaryValue = TDFStruct.decode(stream);
+                    break;
+                default:
+                    throw new TDFNotImplemented(dictionaryValueType);
+            }
+            value[dictionaryKey] = dictionaryValue;
+        }
+        return value;
+    };
     return TDFDictionary;
 }(TDF));
 exports.TDFDictionary = TDFDictionary;
 var TDFUnion = /** @class */ (function (_super) {
     __extends(TDFUnion, _super);
-    function TDFUnion(label, stream) {
+    function TDFUnion(label, value) {
         var _this = _super.call(this) || this;
         _this.label = label;
         _this.type = TDFType.Union;
-        var unionType = stream.read(1).readUInt8(0);
-        _this.value = TDF.readTDF(stream);
+        _this.value = value;
         return _this;
     }
+    TDFUnion.decode = function (stream) {
+        var unionType = stream.read(1).readUInt8(0);
+        return TDF.readTDF(stream);
+    };
     return TDFUnion;
 }(TDF));
 exports.TDFUnion = TDFUnion;
 var TDFIntegerList = /** @class */ (function (_super) {
     __extends(TDFIntegerList, _super);
-    function TDFIntegerList(label, stream) {
+    function TDFIntegerList(label, value) {
         var _this = _super.call(this) || this;
         _this.label = label;
         _this.type = TDFType.IntegerList;
-        _this.value = [];
-        throw new TDFNotImplemented(_this.type);
+        _this.value = value;
         return _this;
     }
+    TDFIntegerList.decode = function (stream) { };
     return TDFIntegerList;
 }(TDF));
 exports.TDFIntegerList = TDFIntegerList;
 var TDFIntVector2 = /** @class */ (function (_super) {
     __extends(TDFIntVector2, _super);
-    function TDFIntVector2(label, stream) {
+    function TDFIntVector2(label, value) {
         var _this = _super.call(this) || this;
         _this.value = [];
         _this.label = label;
         _this.type = TDFType.IntVector2;
-        for (var i = 0; i < 2; i++) {
-            _this.value.push(TDFInteger.readInteger(stream));
-        }
+        _this.value = value;
         return _this;
     }
+    TDFIntVector2.decode = function (stream) {
+        var value = [];
+        for (var i = 0; i < 2; i++) {
+            value.push(TDFInteger.decode(stream));
+        }
+        return value;
+    };
     return TDFIntVector2;
 }(TDF));
 exports.TDFIntVector2 = TDFIntVector2;
 var TDFIntVector3 = /** @class */ (function (_super) {
     __extends(TDFIntVector3, _super);
-    function TDFIntVector3(label, stream) {
+    function TDFIntVector3(label, value) {
         var _this = _super.call(this) || this;
         _this.value = [];
         _this.label = label;
         _this.type = TDFType.IntVector3;
-        for (var i = 0; i < 3; i++) {
-            _this.value.push(TDFInteger.readInteger(stream));
-        }
+        _this.value = value;
         return _this;
     }
+    TDFIntVector3.decode = function (stream) {
+        var value = [];
+        for (var i = 0; i < 3; i++) {
+            value.push(TDFInteger.decode(stream));
+        }
+        return value;
+    };
     return TDFIntVector3;
 }(TDF));
 exports.TDFIntVector3 = TDFIntVector3;

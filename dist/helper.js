@@ -30,6 +30,10 @@ var encodeLabel = function (tag) {
         }
         encodedTag |= (char.charCodeAt(0) - 32) << (6 * (3 - i));
     }
-    return Buffer.from([(encodedTag >> 16) & 0xff, (encodedTag >> 8) & 0xff, encodedTag & 0xff]);
+    return Buffer.from([
+        (encodedTag >> 16) & 0xff,
+        (encodedTag >> 8) & 0xff,
+        encodedTag & 0xff,
+    ]);
 };
 exports.encodeLabel = encodeLabel;
