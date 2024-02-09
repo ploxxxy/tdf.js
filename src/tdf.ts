@@ -1,5 +1,5 @@
 import { Readable } from 'stream'
-import { decodeLabel } from './helper'
+import { decodeLabel, encodeLabel } from './helper'
 
 enum TDFType {
   Integer = 0,
@@ -36,7 +36,7 @@ class TDFNotImplemented extends Error {
 class TDF {
   label!: string
   type!: TDFType
-  value?: any
+  value?: unknown
 
   static readTDF(stream: Readable): TDF {
     const label = decodeLabel(stream.read(3))
@@ -89,6 +89,7 @@ class TDFInteger extends TDF {
     result += byte[0] & 0x3f
     let currentShift = 6
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       if ((byte[0] & 0x80) == 0) {
         break
@@ -124,11 +125,13 @@ class TDFString extends TDF {
     return string?.toString('utf8') ?? '<couldn\'t read>' // TODO: reimplement
   }
 
-  static encode(stream: Readable, string: string) {
-    const length = (string.length + 1).toString(16)
+  encode(stream: Readable) {
+    const length = (this.value.length + 1).toString(16)
 
+    stream.push(encodeLabel(this.label))
+    stream.push(Buffer.from([this.type]))
     stream.push(Buffer.from(length.padStart(2, '0'), 'hex'))
-    stream.push(Buffer.from(string, 'utf8'))
+    stream.push(Buffer.from(this.value, 'utf8'))
     stream.push(Buffer.from('00', 'hex'))
   }
 }
@@ -175,6 +178,7 @@ class TDFStruct extends TDF {
     const list: TDF[] = []
     let b: Buffer
 
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       b = stream.read(1)
 
@@ -196,9 +200,9 @@ class TDFStruct extends TDF {
 }
 
 class TDFList extends TDF {
-  value: any[] // TODO: implement all data types
+  value: unknown[] // TODO: implement all data types
 
-  constructor(label: string, value: any[]) {
+  constructor(label: string, value: unknown[]) {
     super()
 
     this.label = label
@@ -207,7 +211,7 @@ class TDFList extends TDF {
   }
 
   static decode(stream: Readable) {
-    const value: any[] = []
+    const value: unknown[] = []
     const subtype = TDFInteger.decode(stream)
     const count = TDFInteger.decode(stream)
 
@@ -235,7 +239,7 @@ class TDFList extends TDF {
 }
 
 interface Dictionary {
-  [key: string | number]: any
+  [key: string | number]: unknown
 }
 
 class TDFDictionary extends TDF {
@@ -256,7 +260,7 @@ class TDFDictionary extends TDF {
     const count = TDFInteger.decode(stream)
 
     for (let i = 0; i < count; i++) {
-      let dictionaryKey: string | number, dictionaryValue: any
+      let dictionaryKey: string | number, dictionaryValue: unknown
 
       switch (dictionaryKeyType) {
       case TDFType.Integer:
