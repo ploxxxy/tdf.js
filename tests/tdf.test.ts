@@ -13,7 +13,7 @@ const testString = Buffer.from([
 describe('building a TDFString', () => {
   it('should build a TDFString with label "TEST" and value "hello world"', () => {
     const tdfString = new TDFString('TEST', 'hello world')
-    tdfString.encode(stream)
+    tdfString.write(stream)
 
     expect(stream.read()).toEqual(testString)
   })
