@@ -164,7 +164,7 @@ class TDFString extends TDF {
     return Buffer.concat([
       TDFInteger.encode(value.length + 1),
       Buffer.from(value, 'utf8'),
-      Buffer.from('00', 'hex'),
+      Buffer.from([0]),
     ])
   }
 
@@ -191,8 +191,8 @@ class TDFBlob extends TDF {
 
   static decode(stream: Readable) {
     const length = TDFInteger.decode(stream)
-    // const result = stream.read(length)
 
+    // prevents a null Buffer
     const result = Buffer.alloc(length)
     for (let i = 0; i < length; i++) {
       result[i] = stream.read(1)
@@ -228,8 +228,7 @@ class TDFStruct extends TDF {
 
   static decode(stream: Readable) {
     const result: TDF[] = []
-    let byte: Buffer
-    byte = stream.read(1)
+    let byte: Buffer = stream.read(1)
 
     while (byte && byte[0] != 0) {
       stream.unshift(byte)
@@ -313,8 +312,6 @@ class TDFList extends TDF {
     stream.push(Buffer.from([this.subtype]))
     stream.push(TDFInteger.encode(this.length))
 
-    console.log(this.subtype, this.value)
-    
     this.value.forEach((value) => {
       switch (this.subtype) {
       case TDFType.Integer:
@@ -337,7 +334,7 @@ class TDFList extends TDF {
 }
 
 interface Dictionary {
-  [key: string | number]: unknown
+  [key: string | number]: number | string | TDF[]
 }
 
 class TDFDictionary extends TDF {
@@ -372,7 +369,8 @@ class TDFDictionary extends TDF {
     const result: Dictionary = {}
 
     for (let i = 0; i < length; i++) {
-      let dictionaryKey: string | number, dictionaryValue: unknown
+      let dictionaryKey: string | number,
+        dictionaryValue: number | string | TDF[]
 
       switch (dictionaryKeyType) {
       case TDFType.Integer:
@@ -391,9 +389,6 @@ class TDFDictionary extends TDF {
         break
       case TDFType.String:
         dictionaryValue = TDFString.decode(stream)
-        break
-      case TDFType.Blob:
-        dictionaryValue = TDFBlob.decode(stream)
         break
       case TDFType.Struct:
         dictionaryValue = TDFStruct.decode(stream)
@@ -451,11 +446,9 @@ class TDFDictionary extends TDF {
       case TDFType.String:
         stream.push(TDFString.encode(value as string))
         break
-      case TDFType.Blob:
-        stream.push(TDFBlob.encode(value as Buffer))
-        break
       case TDFType.Struct:
-        stream.push((value as TDFStruct).write(stream))
+        (value as TDF[]).forEach((tdf) => tdf.write(stream))
+        stream.push(Buffer.from([0]))
         break
       default:
         throw new TDFNotImplemented(this.dictionaryValueType)
