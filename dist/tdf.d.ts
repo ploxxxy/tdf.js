@@ -63,7 +63,7 @@ declare class TDFList extends TDF {
     write(stream: Readable): void;
 }
 interface Dictionary {
-    [key: string | number]: unknown;
+    [key: string | number]: number | string | TDF[];
 }
 declare class TDFDictionary extends TDF {
     value: Dictionary;
