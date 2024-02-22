@@ -1,6 +1,6 @@
 {
 	"scripts": {
-		"build": "tsc",
+		"build": "jest && tsc",
 		"lint": "eslint . --ext .ts",
 		"lint:fix": "eslint . --ext .ts --fix",
 		"test": "jest"

@@ -1,5 +1,4 @@
 import { Readable } from 'stream'
-import { decodeLabel, encodeLabel } from './helper'
 
 enum TDFType {
   Integer = 0,
@@ -39,40 +38,83 @@ abstract class TDF {
   value: unknown
 
   static readTDF(stream: Readable): TDF {
-    const label = decodeLabel(stream.read(3))
+    const label = TDF.decodeLabel(stream.read(3))
     const type: TDFType = stream.read(1).readUInt8(0)
 
     switch (type) {
-    case TDFType.Integer:
-      return TDFInteger.read(label, stream)
-    case TDFType.String:
-      return TDFString.read(label, stream)
-    case TDFType.Blob:
-      return TDFBlob.read(label, stream)
-    case TDFType.Struct:
-      return TDFStruct.read(label, stream)
-    case TDFType.List:
-      return TDFList.read(label, stream)
-    case TDFType.Dictionary:
-      return TDFDictionary.read(label, stream)
-    case TDFType.Union:
-      return TDFUnion.read(label, stream)
-    case TDFType.IntegerList:
-      return TDFIntegerList.read(label, stream)
-    case TDFType.IntVector2:
-      return TDFIntVector2.read(label, stream)
-    case TDFType.IntVector3:
-      return TDFIntVector3.read(label, stream)
-    default:
-      throw new UnknownTDFType(type.toString())
+      case TDFType.Integer:
+        return TDFInteger.read(label, stream)
+      case TDFType.String:
+        return TDFString.read(label, stream)
+      case TDFType.Blob:
+        return TDFBlob.read(label, stream)
+      case TDFType.Struct:
+        return TDFStruct.read(label, stream)
+      case TDFType.List:
+        return TDFList.read(label, stream)
+      case TDFType.Dictionary:
+        return TDFDictionary.read(label, stream)
+      case TDFType.Union:
+        return TDFUnion.read(label, stream)
+      case TDFType.IntegerList:
+        return TDFIntegerList.read(label, stream)
+      case TDFType.IntVector2:
+        return TDFIntVector2.read(label, stream)
+      case TDFType.IntVector3:
+        return TDFIntVector3.read(label, stream)
+      default:
+        throw new UnknownTDFType(type.toString())
     }
   }
 
-  formPrefix(label: string, type: TDFType) {
-    return Buffer.concat([encodeLabel(label), Buffer.from([type])])
+  formPrefix() {
+    return Buffer.concat([
+      TDF.encodeLabel(this.label),
+      Buffer.from([this.type]),
+    ])
   }
 
-  abstract write(stream: Readable): void
+  abstract write(): Buffer
+
+  static decodeLabel(tag: Buffer) {
+    let encodedTag = tag.readUIntBE(0, 3)
+    const decodedTag = Buffer.alloc(4)
+
+    for (let i = 3; i >= 0; --i) {
+      const sixbits = encodedTag & 0x3f
+      if (sixbits) {
+        decodedTag[i] = sixbits + 32
+      } else {
+        decodedTag[i] = 0x20
+      }
+      encodedTag >>= 6
+    }
+
+    return decodedTag.toString()
+  }
+
+  static encodeLabel(tag: string) {
+    if (tag.length !== 4) {
+      throw new Error('Tag must be 4 characters long.')
+    }
+
+    tag = tag.toUpperCase()
+
+    let encodedTag = 0
+    for (let i = 0; i < tag.length; i++) {
+      const char = tag[i]
+      if (char === ' ') {
+        continue
+      }
+      encodedTag |= (char.charCodeAt(0) - 32) << (6 * (3 - i))
+    }
+
+    return Buffer.from([
+      (encodedTag >> 16) & 0xff,
+      (encodedTag >> 8) & 0xff,
+      encodedTag & 0xff,
+    ])
+  }
 }
 
 class TDFInteger extends TDF {
@@ -128,11 +170,8 @@ class TDFInteger extends TDF {
     return new TDFInteger(label, TDFInteger.decode(stream))
   }
 
-  write(stream: Readable) {
-    const result = TDFInteger.encode(this.value)
-
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(result)
+  write() {
+    return Buffer.concat([this.formPrefix(), TDFInteger.encode(this.value)])
   }
 }
 
@@ -172,9 +211,8 @@ class TDFString extends TDF {
     return new TDFString(label, TDFString.decode(stream))
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(TDFString.encode(this.value))
+  write() {
+    return Buffer.concat([this.formPrefix(), TDFString.encode(this.value)])
   }
 }
 
@@ -209,9 +247,8 @@ class TDFBlob extends TDF {
     return new TDFBlob(label, TDFBlob.decode(stream))
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(TDFBlob.encode(this.value))
+  write() {
+    return Buffer.concat([this.formPrefix(), TDFBlob.encode(this.value)])
   }
 }
 
@@ -243,15 +280,18 @@ class TDFStruct extends TDF {
     return new TDFStruct(label, TDFStruct.decode(stream))
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    this.value.forEach((tdf) => tdf.write(stream))
-    stream.push(Buffer.from([0]))
+  write() {
+    return Buffer.concat([
+      this.formPrefix(),
+      ...this.value.map((tdf) => tdf.write()),
+      Buffer.from([0]),
+    ])
   }
 }
 
+type TDFListValue = number | string | Buffer | TDF[] | number[]
 class TDFList extends TDF {
-  value: unknown[] // TODO: implement all data types
+  value: TDFListValue[] // TODO: implement all data types
   subtype: number
   length: number
 
@@ -259,7 +299,7 @@ class TDFList extends TDF {
     label: string,
     subtype: TDFType,
     length: number,
-    value: unknown[],
+    value: TDFListValue[],
   ) {
     super()
 
@@ -271,24 +311,24 @@ class TDFList extends TDF {
   }
 
   static decode(stream: Readable, subtype: TDFType, length: number) {
-    const result: unknown[] = []
+    const result: TDFListValue[] = []
 
     for (let i = 0; i < length; i++) {
       switch (subtype) {
-      case TDFType.Integer:
-        result.push(TDFInteger.decode(stream))
-        break
-      case TDFType.String:
-        result.push(TDFString.decode(stream))
-        break
-      case TDFType.Blob:
-        result.push(TDFBlob.decode(stream))
-        break
-      case TDFType.Struct:
-        result.push(TDFStruct.decode(stream))
-        break
-      default:
-        throw new TDFNotImplemented(subtype)
+        case TDFType.Integer:
+          result.push(TDFInteger.decode(stream))
+          break
+        case TDFType.String:
+          result.push(TDFString.decode(stream))
+          break
+        case TDFType.Struct:
+          result.push(TDFStruct.decode(stream))
+          break
+        case TDFType.IntVector3:
+          result.push(TDFIntVector3.decode(stream))
+          break
+        default:
+          throw new TDFNotImplemented(subtype)
       }
     }
 
@@ -307,29 +347,26 @@ class TDFList extends TDF {
     )
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(Buffer.from([this.subtype]))
-    stream.push(TDFInteger.encode(this.length))
-
-    this.value.forEach((value) => {
-      switch (this.subtype) {
-      case TDFType.Integer:
-        stream.push(TDFInteger.encode(value as number))
-        break
-      case TDFType.String:
-        stream.push(TDFString.encode(value as string))
-        break
-      case TDFType.Blob:
-        stream.push(TDFBlob.encode(value as Buffer))
-        break
-      case TDFType.Struct:
-        throw new TDFNotImplemented(this.subtype)
-        break
-      default:
-        throw new TDFNotImplemented(this.subtype)
-      }
-    })
+  write() {
+    return Buffer.concat([
+      this.formPrefix(),
+      Buffer.from([this.subtype]),
+      TDFInteger.encode(this.length),
+      ...this.value.map((value) => {
+        switch (this.subtype) {
+          case TDFType.Integer:
+            return TDFInteger.encode(value as number)
+          case TDFType.String:
+            return TDFString.encode(value as string)
+          case TDFType.Struct:
+            return Buffer.concat((value as TDF[]).map((tdf) => tdf.write()))
+          case TDFType.IntVector3:
+            return TDFIntVector3.encode(value as number[])
+          default:
+            throw new TDFNotImplemented(this.subtype)
+        }
+      }),
+    ])
   }
 }
 
@@ -373,28 +410,28 @@ class TDFDictionary extends TDF {
         dictionaryValue: number | string | TDF[]
 
       switch (dictionaryKeyType) {
-      case TDFType.Integer:
-        dictionaryKey = TDFInteger.decode(stream)
-        break
-      case TDFType.String:
-        dictionaryKey = TDFString.decode(stream)
-        break
-      default:
-        throw new TDFNotImplemented(dictionaryKeyType)
+        case TDFType.Integer:
+          dictionaryKey = TDFInteger.decode(stream)
+          break
+        case TDFType.String:
+          dictionaryKey = TDFString.decode(stream)
+          break
+        default:
+          throw new TDFNotImplemented(dictionaryKeyType)
       }
 
       switch (dictionaryValueType) {
-      case TDFType.Integer:
-        dictionaryValue = TDFInteger.decode(stream)
-        break
-      case TDFType.String:
-        dictionaryValue = TDFString.decode(stream)
-        break
-      case TDFType.Struct:
-        dictionaryValue = TDFStruct.decode(stream)
-        break
-      default:
-        throw new TDFNotImplemented(dictionaryValueType)
+        case TDFType.Integer:
+          dictionaryValue = TDFInteger.decode(stream)
+          break
+        case TDFType.String:
+          dictionaryValue = TDFString.decode(stream)
+          break
+        case TDFType.Struct:
+          dictionaryValue = TDFStruct.decode(stream)
+          break
+        default:
+          throw new TDFNotImplemented(dictionaryValueType)
       }
 
       result[dictionaryKey] = dictionaryValue
@@ -422,38 +459,47 @@ class TDFDictionary extends TDF {
     )
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(Buffer.from([this.dictionaryKeyType, this.dictionaryValueType]))
-    stream.push(TDFInteger.encode(this.length))
+  write() {
+    return Buffer.concat([
+      this.formPrefix(),
+      Buffer.from([this.dictionaryKeyType, this.dictionaryValueType]),
+      TDFInteger.encode(this.length),
+      ...Object.entries(this.value).map(([key, value]) => {
+        let keyBuffer: Buffer
 
-    for (const [key, value] of Object.entries(this.value)) {
-      switch (this.dictionaryKeyType) {
-      case TDFType.Integer:
-        stream.push(TDFInteger.encode(key as unknown as number))
-        break
-      case TDFType.String:
-        stream.push(TDFString.encode(key as string))
-        break
-      default:
-        throw new TDFNotImplemented(this.dictionaryKeyType)
-      }
+        switch (this.dictionaryKeyType) {
+          case TDFType.Integer:
+            keyBuffer = TDFInteger.encode(key as unknown as number)
+            break
+          case TDFType.String:
+            keyBuffer = TDFString.encode(key as string)
+            break
+          default:
+            throw new TDFNotImplemented(this.dictionaryKeyType)
+        }
 
-      switch (this.dictionaryValueType) {
-      case TDFType.Integer:
-        stream.push(TDFInteger.encode(value as number))
-        break
-      case TDFType.String:
-        stream.push(TDFString.encode(value as string))
-        break
-      case TDFType.Struct:
-        (value as TDF[]).forEach((tdf) => tdf.write(stream))
-        stream.push(Buffer.from([0]))
-        break
-      default:
-        throw new TDFNotImplemented(this.dictionaryValueType)
-      }
-    }
+        let valueBuffer: Buffer
+
+        switch (this.dictionaryValueType) {
+          case TDFType.Integer:
+            valueBuffer = TDFInteger.encode(value as number)
+            break
+          case TDFType.String:
+            valueBuffer = TDFString.encode(value as string)
+            break
+          case TDFType.Struct:
+            valueBuffer = Buffer.concat([
+              ...(value as TDF[]).map((tdf) => tdf.write()),
+              Buffer.from([0]),
+            ])
+            break
+          default:
+            throw new TDFNotImplemented(this.dictionaryValueType)
+        }
+
+        return Buffer.concat([keyBuffer, valueBuffer])
+      }),
+    ])
   }
 }
 
@@ -481,10 +527,12 @@ class TDFUnion extends TDF {
     return new TDFUnion(label, unionType, value)
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(this.unionType)
-    this.value.write(stream)
+  write() {
+    return Buffer.concat([
+      this.formPrefix(),
+      Buffer.from([this.unionType]),
+      this.value.write(),
+    ])
   }
 }
 
@@ -514,12 +562,12 @@ class TDFIntegerList extends TDF {
     return new TDFIntegerList(label, TDFIntegerList.decode(stream))
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(TDFInteger.encode(this.value.length))
-    this.value.forEach((value) => {
-      stream.push(TDFInteger.encode(value))
-    })
+  write() {
+    return Buffer.concat([
+      this.formPrefix(),
+      TDFInteger.encode(this.value.length),
+      ...this.value.map((value) => TDFInteger.encode(value)),
+    ])
   }
 }
 
@@ -555,9 +603,8 @@ class TDFIntVector2 extends TDF {
     return new TDFIntVector2(label, TDFIntVector2.decode(stream))
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(TDFIntVector2.encode(this.value))
+  write() {
+    return Buffer.concat([this.formPrefix(), TDFIntVector2.encode(this.value)])
   }
 }
 
@@ -594,9 +641,8 @@ class TDFIntVector3 extends TDF {
     return new TDFIntVector3(label, TDFIntVector3.decode(stream))
   }
 
-  write(stream: Readable) {
-    stream.push(this.formPrefix(this.label, this.type))
-    stream.push(TDFIntVector3.encode(this.value))
+  write() {
+    return Buffer.concat([this.formPrefix(), TDFIntVector3.encode(this.value)])
   }
 }
 

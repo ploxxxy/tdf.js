@@ -19,8 +19,10 @@ declare abstract class TDF {
     type: TDFType;
     value: unknown;
     static readTDF(stream: Readable): TDF;
-    formPrefix(label: string, type: TDFType): Buffer;
-    abstract write(stream: Readable): void;
+    formPrefix(): Buffer;
+    abstract write(): Buffer;
+    static decodeLabel(tag: Buffer): string;
+    static encodeLabel(tag: string): Buffer;
 }
 declare class TDFInteger extends TDF {
     value: number;
@@ -28,7 +30,7 @@ declare class TDFInteger extends TDF {
     static decode(stream: Readable): number;
     static encode(value: number): Buffer;
     static read(label: string, stream: Readable): TDFInteger;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFString extends TDF {
     value: string;
@@ -36,7 +38,7 @@ declare class TDFString extends TDF {
     static decode(stream: Readable): any;
     static encode(value: string): Buffer;
     static read(label: string, stream: Readable): TDFString;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFBlob extends TDF {
     value: Buffer;
@@ -44,23 +46,24 @@ declare class TDFBlob extends TDF {
     static decode(stream: Readable): Buffer;
     static encode(value: Buffer): Buffer;
     static read(label: string, stream: Readable): TDFBlob;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFStruct extends TDF {
     value: TDF[];
     constructor(label: string, value: TDF[]);
     static decode(stream: Readable): TDF[];
     static read(label: string, stream: Readable): TDFStruct;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
+type TDFListValue = number | string | Buffer | TDF[] | number[];
 declare class TDFList extends TDF {
-    value: unknown[];
+    value: TDFListValue[];
     subtype: number;
     length: number;
-    constructor(label: string, subtype: TDFType, length: number, value: unknown[]);
-    static decode(stream: Readable, subtype: TDFType, length: number): unknown[];
+    constructor(label: string, subtype: TDFType, length: number, value: TDFListValue[]);
+    static decode(stream: Readable, subtype: TDFType, length: number): TDFListValue[];
     static read(label: string, stream: Readable): TDFList;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 interface Dictionary {
     [key: string | number]: number | string | TDF[];
@@ -73,7 +76,7 @@ declare class TDFDictionary extends TDF {
     constructor(label: string, dictionaryKeyType: TDFType, dictionaryValueType: TDFType, length: number, value: Dictionary);
     static decode(stream: Readable, dictionaryKeyType: TDFType, dictionaryValueType: TDFType, length: number): Dictionary;
     static read(label: string, stream: Readable): TDFDictionary;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFUnion extends TDF {
     value: TDF;
@@ -81,14 +84,14 @@ declare class TDFUnion extends TDF {
     constructor(label: string, unionType: number, value: TDF);
     static decode(stream: Readable): TDF;
     static read(label: string, stream: Readable): TDFUnion;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFIntegerList extends TDF {
     value: number[];
     constructor(label: string, value: number[]);
     static decode(stream: Readable): number[];
     static read(label: string, stream: Readable): TDFIntegerList;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFIntVector2 extends TDF {
     value: number[];
@@ -96,7 +99,7 @@ declare class TDFIntVector2 extends TDF {
     static decode(stream: Readable): number[];
     static encode(value: number[]): Buffer;
     static read(label: string, stream: Readable): TDFIntVector2;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 declare class TDFIntVector3 extends TDF {
     value: number[];
@@ -104,6 +107,6 @@ declare class TDFIntVector3 extends TDF {
     static decode(stream: Readable): number[];
     static encode(value: number[]): Buffer;
     static read(label: string, stream: Readable): TDFIntVector3;
-    write(stream: Readable): void;
+    write(): Buffer;
 }
 export { TDF, TDFBlob, TDFDictionary, TDFIntVector2, TDFIntVector3, TDFInteger, TDFIntegerList, TDFList, TDFString, TDFStruct, TDFType, TDFUnion, };
