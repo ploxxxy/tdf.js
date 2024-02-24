@@ -10,12 +10,26 @@ const testString = Buffer.from([
   0x72, 0x6c, 0x64, 0x00,
 ])
 
+const testLabel = Buffer.from([0xd2, 0x5c, 0xf4])
+
+describe('encode label', () => {
+  it('should encode string "TEST" into Buffer <d2 5c f4>', () => {
+    expect(TDF.encodeLabel('TEST')).toEqual(testLabel)
+  })
+})
+
+describe('decode label', () => {
+  it('should encode Buffer <d2 5c f4> into string "TEST"', () => {
+    expect(TDF.decodeLabel(testLabel)).toEqual('TEST')
+  })
+})
+
 describe('building a TDFString', () => {
   it('should build a TDFString with label "TEST" and value "hello world"', () => {
     const tdfString = new TDFString('TEST', 'hello world')
-    tdfString.write(stream)
+    const buffer = tdfString.write()
 
-    expect(stream.read()).toEqual(testString)
+    expect(buffer).toEqual(testString)
   })
 })
 
