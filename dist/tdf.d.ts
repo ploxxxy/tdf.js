@@ -18,25 +18,20 @@ declare abstract class TDF {
     label: string;
     type: TDFType;
     value: unknown;
+    constructor(label: string, type: TDFType);
     static readTDF(stream: Readable): TDF;
     formPrefix(): Buffer;
     abstract write(): Buffer;
-    static decodeLabel(tag: Buffer): string;
-    static encodeLabel(tag: string): Buffer;
 }
 declare class TDFInteger extends TDF {
     value: number;
     constructor(label: string, value: number);
-    static decode(stream: Readable): number;
-    static encode(value: number): Buffer;
     static read(label: string, stream: Readable): TDFInteger;
     write(): Buffer;
 }
 declare class TDFString extends TDF {
     value: string;
     constructor(label: string, value: string);
-    static decode(stream: Readable): any;
-    static encode(value: string): Buffer;
     static read(label: string, stream: Readable): TDFString;
     write(): Buffer;
 }
@@ -51,18 +46,16 @@ declare class TDFBlob extends TDF {
 declare class TDFStruct extends TDF {
     value: TDF[];
     constructor(label: string, value: TDF[]);
-    static decode(stream: Readable): TDF[];
     static read(label: string, stream: Readable): TDFStruct;
     write(): Buffer;
 }
-type TDFListValue = number | string | Buffer | TDF[] | number[];
-declare class TDFList extends TDF {
-    value: TDFListValue[];
+declare class TDFList<T> extends TDF {
+    value: T[];
     subtype: number;
     length: number;
-    constructor(label: string, subtype: TDFType, length: number, value: TDFListValue[]);
-    static decode(stream: Readable, subtype: TDFType, length: number): TDFListValue[];
-    static read(label: string, stream: Readable): TDFList;
+    constructor(label: string, subtype: TDFType, length: number, value: T[]);
+    static decode<T>(stream: Readable, subtype: TDFType, length: number): T[];
+    static read(label: string, stream: Readable): TDFList<unknown>;
     write(): Buffer;
 }
 interface Dictionary {
