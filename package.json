@@ -5,9 +5,9 @@
 		"lint:fix": "eslint . --ext .ts --fix",
 		"test": "jest"
 	},
-	"name": "node-tdf",
-	"version": "0.1.0",
-	"description": "Implements EA's TDF file format in JS",
+	"name": "tdf.js",
+	"version": "0.2.0",
+	"description": "Implements EA's TDF packet format in JS",
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"devDependencies": {
