@@ -74,7 +74,10 @@ abstract class TDF {
   }
 
   formPrefix() {
-    return Buffer.concat([utils.encodeLabel(this.label), Buffer.from([this.type])])
+    return Buffer.concat([
+      utils.encodeLabel(this.label),
+      Buffer.from([this.type]),
+    ])
   }
 
   abstract write(): Buffer
@@ -128,7 +131,8 @@ class TDFBlob extends TDF {
     // prevents a null Buffer
     const result = Buffer.alloc(length)
     for (let i = 0; i < length; i++) {
-      result[i] = stream.read(1)
+      const byte: Buffer = stream.read(1)
+      result[i] = byte[0]
     }
 
     return result
@@ -209,7 +213,12 @@ class TDFList<T> extends TDF {
     const subtype = utils.decompressInteger(stream)
     const length = utils.decompressInteger(stream)
 
-    return new TDFList(label, subtype, length, TDFList.decode(stream, subtype, length))
+    return new TDFList(
+      label,
+      subtype,
+      length,
+      TDFList.decode(stream, subtype, length)
+    )
   }
 
   write() {
@@ -270,7 +279,8 @@ class TDFDictionary extends TDF {
     const result: Dictionary = {}
 
     for (let i = 0; i < length; i++) {
-      let dictionaryKey: string | number, dictionaryValue: number | string | TDF[]
+      let dictionaryKey: string | number,
+        dictionaryValue: number | string | TDF[]
 
       switch (dictionaryKeyType) {
         case TDFType.Integer:
@@ -313,7 +323,12 @@ class TDFDictionary extends TDF {
       dictionaryKeyType,
       dictionaryValueType,
       length,
-      TDFDictionary.decode(stream, dictionaryKeyType, dictionaryValueType, length)
+      TDFDictionary.decode(
+        stream,
+        dictionaryKeyType,
+        dictionaryValueType,
+        length
+      )
     )
   }
 
@@ -383,7 +398,11 @@ class TDFUnion extends TDF {
   }
 
   write() {
-    return Buffer.concat([this.formPrefix(), Buffer.from([this.unionType]), this.value.write()])
+    return Buffer.concat([
+      this.formPrefix(),
+      Buffer.from([this.unionType]),
+      this.value.write(),
+    ])
   }
 }
 
@@ -438,7 +457,10 @@ class TDFIntVector2 extends TDF {
   }
 
   static encode(value: number[]) {
-    return Buffer.concat([utils.compressInteger(value[0]), utils.compressInteger(value[1])])
+    return Buffer.concat([
+      utils.compressInteger(value[0]),
+      utils.compressInteger(value[1]),
+    ])
   }
 
   static read(label: string, stream: Readable) {
