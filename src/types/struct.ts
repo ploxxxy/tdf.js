@@ -1,4 +1,5 @@
-import Tdf, { BaseType } from './tdf'
+import { BaseType } from '../utils/basetype'
+import Tdf from './tdf'
 
 class TdfStruct extends Tdf {
   declare value: Tdf[]

@@ -1,5 +1,6 @@
 import type { BlazeObjectType } from './object-type'
-import Tdf, { BaseType } from './tdf'
+import { BaseType } from '../utils/basetype'
+import Tdf from './tdf'
 
 interface BlazeObjectId extends BlazeObjectType {
   entityId: number

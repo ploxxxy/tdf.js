@@ -1,4 +1,5 @@
-import Tdf, { BaseType } from './tdf'
+import { BaseType } from '../utils/basetype'
+import Tdf from './tdf'
 
 class TdfBinary extends Tdf {
   declare value: Buffer

@@ -1,4 +1,5 @@
-import Tdf, { BaseType } from './tdf'
+import { BaseType } from '../utils/basetype'
+import Tdf from './tdf'
 
 type SupportedValues = string | number | Tdf[]
 

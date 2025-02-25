@@ -13,8 +13,8 @@ import type {
 import type { BlazeObjectId } from '../types/object-id'
 import type { BlazeObjectType } from '../types/object-type'
 import type Tdf from '../types/tdf'
-import { BaseType } from '../types/tdf'
-import { Heat2Util } from './decoder'
+import { BaseType, isValid } from '../utils/basetype'
+import { Heat2Util } from '../utils/heat2'
 import BufWriter from './writer'
 
 class TdfEncoder {
@@ -80,7 +80,7 @@ class TdfEncoder {
   }
 
   private writeHeader(tag: bigint, type: BaseType) {
-    if (type >= BaseType.Max) {
+    if (!isValid(type)) {
       throw new Error(`Unsupported type: ${type}`)
     }
 

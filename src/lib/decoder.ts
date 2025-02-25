@@ -11,12 +11,9 @@ import {
   TdfVariable,
 } from '../types'
 import type Tdf from '../types/tdf'
-import { BaseType } from '../types/tdf'
+import { BaseType, isValid } from '../utils/basetype'
+import { Heat2Util } from '../utils/heat2'
 import BufReader from './reader'
-
-function promoteUnsignedByte(byte: number) {
-  return byte & 0xff
-}
 
 export default class TdfDecoder {
   private reader: BufReader
@@ -99,14 +96,10 @@ export default class TdfDecoder {
   private readHeader() {
     const header = this.reader.readBytes(Heat2Util.HEADER_SIZE)
 
-    const tag = BigInt(
-      (promoteUnsignedByte(header[0]) << 24) |
-        (promoteUnsignedByte(header[1]) << 16) |
-        (promoteUnsignedByte(header[2]) << 8)
-    )
-    const type = promoteUnsignedByte(header[3])
+    const tag = BigInt((header[0] << 24) | (header[1] << 16) | (header[2] << 8))
+    const type = header[3]
 
-    if (type >= BaseType.Max) {
+    if (!isValid(type)) {
       throw new Error(`Unsupported type: ${type}`)
     }
 
@@ -289,12 +282,4 @@ export default class TdfDecoder {
 
     return { componentId, typeId, entityId }
   }
-}
-
-// TODO: move
-export enum Heat2Util {
-  VARSIZE_NEGATIVE = 0x40,
-  VARSIZE_MORE = 0x80,
-  HEADER_SIZE = 4,
-  FLOAT_SIZE = 4,
 }

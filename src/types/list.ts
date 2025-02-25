@@ -1,4 +1,5 @@
-import Tdf, { BaseType } from './tdf'
+import { BaseType } from '../utils/basetype'
+import Tdf from './tdf'
 
 class TdfList extends Tdf {
   declare value: any[]
