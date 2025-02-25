@@ -19,11 +19,11 @@ export default class TdfDecoder {
   private reader: BufReader
   private payload: Tdf[]
 
-  decode(buf: Buffer) {
-    // TODO: reuse the reader
+  constructor(buf: Buffer) {
     this.reader = new BufReader(buf)
-    this.payload = []
+  }
 
+  decode() {
     while (this.reader.remaining > 0) {
       this.payload.push(this.readTdf())
     }
@@ -211,7 +211,6 @@ export default class TdfDecoder {
   }
 
   private decodeList() {
-    // TODO: enforce type
     const listType = this.reader.readUInt8()
     const length = this.decodeInteger()
 
@@ -228,12 +227,11 @@ export default class TdfDecoder {
     const valueType = this.reader.readUInt8()
     const length = this.decodeInteger()
 
-    const map = new Map<string, string | number | Tdf[]>()
+    const map = new Map<any, any>()
 
     for (let i = 0; i < length; i++) {
-      // TODO: might have to be a TDF
-      const key = this.readTdfValue(keyType) as string
-      const value = this.readTdfValue(valueType) as string | number | Tdf[]
+      const key = this.readTdfValue(keyType)
+      const value = this.readTdfValue(valueType)
 
       map.set(key, value)
     }

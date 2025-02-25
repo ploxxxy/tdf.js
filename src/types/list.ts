@@ -1,11 +1,11 @@
-import { BaseType } from '../utils/basetype'
+import { BaseType, type TdfValue } from '../utils/basetype'
 import Tdf from './tdf'
 
-class TdfList extends Tdf {
-  declare value: any[]
-  listType: BaseType
+class TdfList<T extends BaseType> extends Tdf {
+  declare value: TdfValue<T>[]
+  listType: T
 
-  constructor(tag: bigint | string, listType: BaseType, value: any[]) {
+  constructor(tag: bigint | string, listType: T, value: TdfValue<T>[]) {
     super(tag, BaseType.List, value)
 
     this.listType = listType

@@ -20,10 +20,11 @@ import BufWriter from './writer'
 class TdfEncoder {
   private writer: BufWriter
 
-  encode(tdfs: Tdf[]) {
-    // TODO: reuse the writer
+  constructor() {
     this.writer = new BufWriter()
+  }
 
+  encode(tdfs: Tdf[]) {
     for (const tdf of tdfs) {
       this.writeTdf(tdf)
     }
@@ -53,13 +54,16 @@ class TdfEncoder {
         this.encodeStruct((tdf as TdfStruct).value)
         break
       case BaseType.List:
-        this.encodeList((tdf as TdfList).listType, (tdf as TdfList).value)
+        this.encodeList(
+          (tdf as TdfList<any>).listType,
+          (tdf as TdfList<any>).value
+        )
         break
       case BaseType.Map:
         this.encodeMap(
-          (tdf as TdfMap).keyType,
-          (tdf as TdfMap).valueType,
-          (tdf as TdfMap).value
+          (tdf as TdfMap<any, any>).keyType,
+          (tdf as TdfMap<any, any>).valueType,
+          (tdf as TdfMap<any, any>).value
         )
         break
       case BaseType.Union:
@@ -84,8 +88,7 @@ class TdfEncoder {
       throw new Error(`Unsupported type: ${type}`)
     }
 
-    // TODO: Heat2Utils.HEADER_SIZE
-    const header = Buffer.alloc(4)
+    const header = Buffer.alloc(Heat2Util.HEADER_SIZE)
     header[0] = Number((tag >> 24n) & 0xffn)
     header[1] = Number((tag >> 16n) & 0xffn)
     header[2] = Number((tag >> 8n) & 0xffn)
@@ -100,9 +103,7 @@ class TdfEncoder {
       return
     }
 
-    // TODO: Heat2Utils.VARSIZE_MAX_ENCDOING_SIZE or whatever
-    // TODO: make it global to the class for efficiency
-    const buf = Buffer.alloc(10)
+    const buf = Buffer.alloc(Heat2Util.VARSIZE_MAX_ENCODE_SIZE)
     let oidx = 0
 
     if (value < 0) {

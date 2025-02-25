@@ -4,9 +4,9 @@ import { decodeTag, encodeTag } from '../utils/tag-info'
 abstract class Tdf {
   tag: bigint
   type: BaseType
-  value: any
+  value: unknown
 
-  constructor(tag: bigint | string, type: BaseType, value: any) {
+  constructor(tag: bigint | string, type: BaseType, value: unknown) {
     this.tag = typeof tag === 'string' ? encodeTag(tag) : tag
 
     this.type = type

@@ -1,18 +1,16 @@
-import { BaseType } from '../utils/basetype'
+import { BaseType, type TdfValue } from '../utils/basetype'
 import Tdf from './tdf'
 
-type SupportedValues = string | number | Tdf[]
-
-class TdfMap extends Tdf {
-  declare value: Map<string, SupportedValues>
-  keyType: BaseType
-  valueType: BaseType
+class TdfMap<K extends BaseType, V extends BaseType> extends Tdf {
+  declare value: Map<TdfValue<K>, TdfValue<V>>
+  keyType: K
+  valueType: V
 
   constructor(
     tag: bigint | string,
-    keyType: BaseType,
-    valueType: BaseType,
-    value: Map<string, SupportedValues>
+    keyType: K,
+    valueType: V,
+    value: Map<TdfValue<K>, TdfValue<V>>
   ) {
     super(tag, BaseType.Map, value)
 
