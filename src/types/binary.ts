@@ -4,7 +4,7 @@ import Tdf from './tdf'
 class TdfBinary extends Tdf {
   declare value: Buffer
 
-  constructor(tag: bigint | string, value: Buffer) {
+  constructor(tag: number | string, value: Buffer) {
     super(tag, BaseType.Binary, value)
   }
 }

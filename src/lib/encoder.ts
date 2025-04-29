@@ -83,15 +83,15 @@ class TdfEncoder {
     }
   }
 
-  private writeHeader(tag: bigint, type: BaseType) {
+  private writeHeader(tag: number, type: BaseType) {
     if (!isValid(type)) {
       throw new Error(`Unsupported type: ${type}`)
     }
 
     const header = Buffer.alloc(Heat2Util.HEADER_SIZE)
-    header[0] = Number((tag >> 24n) & 0xffn)
-    header[1] = Number((tag >> 16n) & 0xffn)
-    header[2] = Number((tag >> 8n) & 0xffn)
+    header[0] = (tag >> 24) & 0xff
+    header[1] = (tag >> 16) & 0xff
+    header[2] = (tag >> 8) & 0xff
     header[3] = type
 
     this.writer.writeBytes(header)
@@ -162,7 +162,7 @@ class TdfEncoder {
       this.writeTdfValue(listType, {
         value: item,
         type: listType,
-        tag: 0n,
+        tag: 0,
         label: '',
       })
     }
@@ -181,14 +181,14 @@ class TdfEncoder {
       this.writeTdfValue(keyType, {
         value: key,
         type: keyType,
-        tag: 0n,
+        tag: 0,
         label: '',
       })
 
       this.writeTdfValue(valueType, {
         value: val,
         type: valueType,
-        tag: 0n,
+        tag: 0,
         label: '',
       })
     }

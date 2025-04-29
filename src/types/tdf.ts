@@ -2,11 +2,11 @@ import type { BaseType } from '../utils/basetype'
 import { decodeTag, encodeTag } from '../utils/tag-info'
 
 abstract class Tdf {
-  tag: bigint
+  tag: number
   type: BaseType
   value: unknown
 
-  constructor(tag: bigint | string, type: BaseType, value: unknown) {
+  constructor(tag: number | string, type: BaseType, value: unknown) {
     this.tag = typeof tag === 'string' ? encodeTag(tag) : tag
 
     this.type = type

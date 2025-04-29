@@ -4,7 +4,7 @@ import Tdf from './tdf'
 class TdfUnion extends Tdf {
   declare value: Tdf
 
-  constructor(tag: bigint | string, value: Tdf) {
+  constructor(tag: number | string, value: Tdf) {
     super(tag, BaseType.Union, value)
   }
 }

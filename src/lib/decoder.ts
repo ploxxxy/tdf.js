@@ -10,14 +10,17 @@ import {
   TdfUnion,
   TdfVariable,
 } from '../types'
+import type { BlazeObjectId } from '../types/object-id'
+import type { BlazeObjectType } from '../types/object-type'
 import type Tdf from '../types/tdf'
 import { BaseType, isValid } from '../utils/basetype'
 import { Heat2Util } from '../utils/heat2'
+import { decodeTag } from '../utils/tag-info'
 import BufReader from './reader'
 
 export default class TdfDecoder {
   private reader: BufReader
-  private payload: Tdf[]
+  private payload: Tdf[] = []
 
   constructor(buf: Buffer) {
     this.reader = new BufReader(buf)
@@ -87,7 +90,7 @@ export default class TdfDecoder {
       case BaseType.BlazeObjectType:
         return this.decodeBlazeObjectType()
       case BaseType.BlazeObjectId:
-        return this.decodeBlazeObjectId
+        return this.decodeBlazeObjectId()
       default:
         throw new Error(`Unsupported type: ${type}`)
     }
@@ -96,7 +99,7 @@ export default class TdfDecoder {
   private readHeader() {
     const header = this.reader.readBytes(Heat2Util.HEADER_SIZE)
 
-    const tag = BigInt((header[0] << 24) | (header[1] << 16) | (header[2] << 8))
+    const tag = ((header[0] << 24) | (header[1] << 16) | (header[2] << 8)) >>> 0
     const type = header[3]
 
     if (!isValid(type)) {
@@ -116,14 +119,14 @@ export default class TdfDecoder {
     let value = BigInt(byte & (Heat2Util.VARSIZE_NEGATIVE - 1))
 
     if (hasMore) {
-      let shift = 6
+      let shift = 6n
 
       while (this.reader.remaining > 0) {
         byte = this.reader.readUInt8()
 
         let partial = BigInt(byte)
         partial = partial & BigInt(Heat2Util.VARSIZE_MORE - 1)
-        partial = partial << BigInt(shift)
+        partial = partial << shift
         value = value | partial
 
         hasMore = (byte & Heat2Util.VARSIZE_MORE) !== 0
@@ -132,7 +135,7 @@ export default class TdfDecoder {
           break
         }
 
-        shift += 7
+        shift += 7n
       }
 
       if (hasMore) {
@@ -270,7 +273,7 @@ export default class TdfDecoder {
     const componentId = this.decodeInteger()
     const typeId = this.decodeInteger()
 
-    return { componentId, typeId }
+    return { componentId, typeId } as BlazeObjectType
   }
 
   private decodeBlazeObjectId() {
@@ -278,6 +281,6 @@ export default class TdfDecoder {
     const typeId = this.decodeInteger()
     const entityId = this.decodeInteger()
 
-    return { componentId, typeId, entityId }
+    return { componentId, typeId, entityId } as BlazeObjectId
   }
 }

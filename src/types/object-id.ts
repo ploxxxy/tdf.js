@@ -9,7 +9,7 @@ interface BlazeObjectId extends BlazeObjectType {
 class TdfBlazeObjectId extends Tdf {
   declare value: BlazeObjectId
 
-  constructor(tag: bigint | string, value: BlazeObjectId) {
+  constructor(tag: number | string, value: BlazeObjectId) {
     super(tag, BaseType.BlazeObjectId, value)
   }
 }

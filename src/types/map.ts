@@ -7,7 +7,7 @@ class TdfMap<K extends BaseType, V extends BaseType> extends Tdf {
   valueType: V
 
   constructor(
-    tag: bigint | string,
+    tag: number | string,
     keyType: K,
     valueType: V,
     value: Map<TdfValue<K>, TdfValue<V>>

@@ -1,39 +1,28 @@
 import { Heat2Util } from './heat2'
 
-function decodeTag(tag: bigint) {
+function decodeTag(tag: number) {
+  tag = tag >>> 8
+
   const buf: number[] = new Array(Heat2Util.MAX_TAG_LENGTH)
 
-  tag >>= 8n
-  for (let i = 3; i >= 0; --i) {
-    const sixBits = tag & 0x3fn
-    if (sixBits !== 0n) {
-      buf[i] = Number(sixBits + 32n)
-    } else {
-      buf[i] = 0x20
-    }
-    tag >>= 6n
+  for (let i = Heat2Util.MAX_TAG_LENGTH - 1; i >= 0; --i) {
+    const sixBits = tag & 0x3f
+    buf[i] = sixBits !== 0 ? sixBits + 32 : 0x20
+    tag >>= 6
   }
 
-  let result = ''
-  for (let i = 0; i <= buf.length; i++) {
-    result += String.fromCharCode(buf[i])
-  }
-
-  return result
+  return String.fromCharCode(...buf)
 }
 
 function encodeTag(tag: string) {
   tag = tag.toUpperCase().padEnd(Heat2Util.MAX_TAG_LENGTH, ' ')
 
-  let result = 0n
+  let result = 0
   for (let i = 0; i < tag.length; i++) {
-    result <<= 6n
-    result |= BigInt(tag.charCodeAt(i) - 32)
+    result <<= 6
+    result |= (tag.charCodeAt(i) - 32) & 0x3f
   }
-  return result << 8n
+  return result << 8
 }
 
-export { 
-  decodeTag,
-  encodeTag
-}
+export { decodeTag, encodeTag }

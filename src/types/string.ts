@@ -4,7 +4,7 @@ import Tdf from './tdf'
 class TdfString extends Tdf {
   declare value: string
 
-  constructor(tag: bigint | string, value: string) {
+  constructor(tag: number | string, value: string) {
     super(tag, BaseType.String, value)
   }
 }
