@@ -1,25 +1,11 @@
 {
-	"scripts": {
-		"build": "jest && tsc",
-		"lint": "eslint . --ext .ts",
-		"lint:fix": "eslint . --ext .ts --fix",
-		"test": "jest"
-	},
-	"name": "tdf.js",
+	"name": "eatdf",
 	"version": "0.2.0",
-	"description": "Implements EA's TDF packet format in JS",
-	"main": "dist/index.js",
-	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "tsc"
+	},
 	"devDependencies": {
-		"@types/jest": "^29.5.12",
-		"@types/node": "^20.10.4",
-		"@typescript-eslint/eslint-plugin": "^6.21.0",
-		"@typescript-eslint/parser": "^6.21.0",
-		"eslint": "^8.56.0",
-		"jest": "^29.7.0",
-		"prettier": "^3.2.5",
-		"prettier-eslint": "^16.3.0",
-		"ts-jest": "^29.1.2",
-		"typescript": "^5.3.3"
+		"@types/node": "^22.13.5",
+		"typescript": "^5.7.3"
 	}
 }
