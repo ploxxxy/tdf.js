@@ -19,6 +19,7 @@ import BufWriter from './writer'
 
 class TdfEncoder {
   private writer: BufWriter
+  private varsizeBuffer: Buffer | null = null
 
   constructor() {
     this.writer = new BufWriter()
@@ -103,7 +104,9 @@ class TdfEncoder {
       return
     }
 
-    const buf = Buffer.alloc(Heat2Util.VARSIZE_MAX_ENCODE_SIZE)
+    const buf =
+      this.varsizeBuffer ??
+      Buffer.allocUnsafe(Heat2Util.VARSIZE_MAX_ENCODE_SIZE)
     let oidx = 0
 
     if (value < 0) {
@@ -134,7 +137,7 @@ class TdfEncoder {
   }
 
   private encodeString(value: string) {
-    const length = Buffer.byteLength(value)
+    const length = Buffer.byteLength(value) + 1
     this.encodeInteger(length)
 
     const buf = Buffer.from(value)

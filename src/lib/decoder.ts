@@ -248,7 +248,8 @@ export default class TdfDecoder {
     // TODO: Union.INVALID_MEMBER_INDEX
     if (activeMember === 127) {
       // TODO: handle this case
-      throw new Error('Invalid member index')
+      return new TdfString('SHIT', "i don't know how to handle unions ...")
+      // throw new Error('Invalid member index')
     }
 
     return this.readTdf()
@@ -264,7 +265,7 @@ export default class TdfDecoder {
     }
 
     // variable tdfs are terminated like a strucutre
-    this.reader.readUInt8()
+    // this.reader.readUInt8()
 
     return values
   }

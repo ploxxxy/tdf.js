@@ -22,7 +22,7 @@ function encodeTag(tag: string) {
     result <<= 6
     result |= (tag.charCodeAt(i) - 32) & 0x3f
   }
-  return result << 8
+  return (result << 8) >>> 0
 }
 
 export { decodeTag, encodeTag }
